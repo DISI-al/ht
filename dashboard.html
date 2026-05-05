@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>检测平台 - 数据中心能源调度</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<style>
+:root {
+  --green-d: #2d6a2d; --green-m: #5ba050; --green-l: #7ec87b;
+  --text-p: #2c3e2c; --text-s: #5a7a5a; --bg: #eaf5ea; --card: #ffffff;
+  --accent: #e8a020; --border: #c8e0c8; --green-bright: #4a9a4a; --green-cyan: #6ec86e;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  font-family:'Microsoft YaHei',system-ui,sans-serif;
+  background:linear-gradient(180deg,#d8ebd8 0%,#e8f2e8 30%,#f0f7f0 60%,#e8f2e8 100%);
+  min-height:100vh;overflow-x:hidden;color:var(--text-p);
+}
+.panel{
+  background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 16px;
+  transition:all 0.3s ease;box-shadow:0 2px 12px rgba(0,0,0,0.04);
+}
+.panel:hover{box-shadow:0 6px 24px rgba(0,0,0,0.08);transform:translateY(-1px);border-color:#5ba050;}
+.section-title{font-size:13px;font-weight:700;color:var(--green-m);letter-spacing:0.04em;margin-bottom:10px;padding-left:10px;border-left:3px solid var(--green-m);}
+.kpi-value{font-size:26px;font-weight:800;line-height:1.1;color:var(--green-d);}
+.kpi-unit{font-size:11px;font-weight:400;color:var(--text-s);margin-left:1px;}
+.kpi-label{font-size:11px;color:var(--text-s);margin-top:2px;}
+.kpi-card{
+  background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px 12px;
+  transition:all 0.3s ease;
+}
+.kpi-card:hover{border-color:var(--green-m);transform:translateY(-1px);box-shadow:0 4px 16px rgba(91,160,80,0.1);}
+.status-dot{width:7px;height:7px;border-radius:50%;background:#5ba050;display:inline-block;animation:pulse-dot 2s ease-in-out infinite;}
+@keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:0.4}}
+canvas{max-width:100%;max-height:180px;}
+.progress-track{background:#e0e8e0;border-radius:4px;height:6px;overflow:hidden;}
+.progress-fill{height:100%;border-radius:4px;transition:width 1.5s ease;}
+.top-bar{
+  height:56px;background:linear-gradient(90deg,#2d6a2d,#4a9a4a,#5ba050);
+  display:flex;align-items:center;justify-content:space-between;padding:0 20px;
+  color:#fff;font-size:14px;margin-bottom:0;box-shadow:0 2px 6px rgba(0,0,0,0.08);
+}
+.top-bar a{color:#fff;opacity:0.85;text-decoration:none;font-size:13px;}
+.top-bar a:hover{opacity:1;}
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <div style="display:flex;align-items:center;gap:10px;font-weight:700;font-size:15px;">
+    <div style="width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;">D</div>
+    数据中心AI零碳化节能调度系统
+  </div>
+  <div style="display:flex;align-items:center;gap:16px;font-size:13px;">
+    <a href="/selector">← 返回导航</a>
+    <span id="clock"></span>
+    <span><span class="status-dot"></span> 在线</span>
+    <a href="/logout">退出</a>
+  </div>
+</div>
+
+<div style="display:flex;gap:12px;padding:12px;min-height:0;">
+
+  <!-- LEFT -->
+  <aside style="width:300px;flex-shrink:0;display:flex;flex-direction:column;gap:12px;" id="left-panel">
+    <div class="panel" style="flex:1;opacity:0;"><div class="section-title">客户类型分布</div>
+      <div style="display:flex;align-items:center;justify-content:center;gap:16px;height:calc(100% - 30px);">
+        <canvas id="ringChart" width="90" height="90"></canvas>
+        <div style="display:flex;flex-direction:column;gap:4px;font-size:12px;" id="customer-list"></div>
+      </div>
+    </div>
+    <div class="panel" style="flex:1;opacity:0;"><div class="section-title">光伏发电功率</div><canvas id="pvChart"></canvas></div>
+    <div class="panel" style="flex:1;opacity:0;"><div class="section-title">电网交换功率</div><canvas id="gridChart"></canvas></div>
+    <div class="panel" style="flex:1;opacity:0;"><div class="section-title">当月水电统计 (万kWh)</div><canvas id="hydroChart"></canvas></div>
+  </aside>
+
+  <!-- CENTER -->
+  <main style="flex:1;display:flex;flex-direction:column;gap:12px;min-width:0;">
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;opacity:0;" id="kpi-cards">
+      <div class="kpi-card"><div class="kpi-label">光伏</div><div class="kpi-value" id="kpi-pv">0<span class="kpi-unit"> kW</span></div></div>
+      <div class="kpi-card"><div class="kpi-label">风机</div><div class="kpi-value" id="kpi-wind">0<span class="kpi-unit"> kW</span></div></div>
+      <div class="kpi-card"><div class="kpi-label">储能</div><div class="kpi-value" id="kpi-storage">0<span class="kpi-unit"> kWh</span></div></div>
+      <div class="kpi-card"><div class="kpi-label">充电桩</div><div class="kpi-value" id="kpi-charging">0<span class="kpi-unit"> 台</span></div></div>
+      <div class="kpi-card"><div class="kpi-label">冷机</div><div class="kpi-value" id="kpi-cooling">0<span class="kpi-unit"> kW</span></div></div>
+      <div class="kpi-card"><div class="kpi-label">燃机</div><div class="kpi-value" id="kpi-gas">0<span class="kpi-unit"> kW</span></div></div>
+      <div class="kpi-card"><div class="kpi-label">变配电</div><div class="kpi-value" id="kpi-transformer">0<span class="kpi-unit"> %</span></div></div>
+      <div class="kpi-card"><div class="kpi-label">需要峰值</div><div class="kpi-value" id="kpi-peak">0<span class="kpi-unit"> kW</span></div></div>
+    </div>
+    <div class="panel" style="flex:1;position:relative;overflow:hidden;opacity:0;" id="building-view">
+      <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 30% 40%,rgba(91,160,80,0.1) 0%,transparent 60%),radial-gradient(ellipse at 70% 50%,rgba(126,200,123,0.08) 0%,transparent 55%);"></div>
+      <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:1;">
+        <div style="text-align:center;">
+          <div style="width:200px;height:140px;margin:0 auto;position:relative;">
+            <div style="position:absolute;bottom:0;left:30px;width:55px;height:90px;background:linear-gradient(180deg,rgba(91,160,80,0.2),rgba(91,160,80,0.05));border:1px solid rgba(91,160,80,0.3);border-bottom:none;"></div>
+            <div style="position:absolute;bottom:0;left:70px;width:80px;height:125px;background:linear-gradient(180deg,rgba(74,154,74,0.25),rgba(74,154,74,0.06));border:1px solid rgba(74,154,74,0.4);border-bottom:none;"></div>
+            <div style="position:absolute;bottom:0;right:20px;width:45px;height:65px;background:linear-gradient(180deg,rgba(126,200,123,0.18),rgba(126,200,123,0.04));border:1px solid rgba(126,200,123,0.3);border-bottom:none;"></div>
+            <div style="position:absolute;bottom:0;left:0;right:0;height:1px;background:rgba(91,160,80,0.3);"></div>
+          </div>
+          <p style="color:var(--text-s);font-size:12px;margin-top:8px;letter-spacing:0.08em;">园区能源拓扑视图</p>
+        </div>
+      </div>
+      <div style="position:absolute;top:12px;left:12px;font-size:12px;color:var(--text-s);">实时监控中</div>
+      <div style="position:absolute;top:12px;right:12px;display:flex;align-items:center;gap:4px;font-size:12px;"><span class="status-dot"></span><span style="color:var(--text-s);">在线</span></div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;opacity:0;" id="status-cards">
+      <div class="kpi-card" style="display:flex;align-items:center;gap:10px;"><div style="width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:#e8f5e0;border:1px solid #c8e6c0;">&#9728;</div><div><div style="font-size:12px;font-weight:600;">光伏发电</div><div style="font-size:11px;color:var(--text-s);"><span class="status-dot"></span> 正常运行</div></div></div>
+      <div class="kpi-card" style="display:flex;align-items:center;gap:10px;"><div style="width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:#e0f0e8;border:1px solid #c0e0d0;">&#9889;</div><div><div style="font-size:12px;font-weight:600;">储能系统</div><div style="font-size:11px;color:var(--text-s);"><span class="status-dot"></span> 正常运行</div></div></div>
+      <div class="kpi-card" style="display:flex;align-items:center;gap:10px;"><div style="width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:#fef5e0;border:1px solid #f0e0b8;">&#9881;</div><div><div style="font-size:12px;font-weight:600;">充电桩</div><div style="font-size:11px;color:var(--text-s);"><span class="status-dot"></span> 正常运行</div></div></div>
+    </div>
+  </main>
+
+  <!-- RIGHT -->
+  <aside style="width:300px;flex-shrink:0;display:flex;flex-direction:column;gap:12px;" id="right-panel">
+    <div class="panel" style="opacity:0;"><div class="section-title">当月效益分析</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
+        <div style="text-align:center;"><div style="font-size:16px;font-weight:800;color:#4a9a4a;" id="bn1">0</div><div style="font-size:10px;color:var(--text-s);">供电量 万kWh</div></div>
+        <div style="text-align:center;"><div style="font-size:16px;font-weight:800;color:#5ba050;" id="bn2">0</div><div style="font-size:10px;color:var(--text-s);">售电量 万kWh</div></div>
+        <div style="text-align:center;"><div style="font-size:16px;font-weight:800;color:#e8a020;" id="bn3">0</div><div style="font-size:10px;color:var(--text-s);">损耗率 %</div></div>
+        <div style="text-align:center;"><div style="font-size:16px;font-weight:800;color:#4a9a4a;" id="bn4">0</div><div style="font-size:10px;color:var(--text-s);">总收入 万元</div></div>
+        <div style="text-align:center;"><div style="font-size:16px;font-weight:800;color:#5ba050;" id="bn5">0</div><div style="font-size:10px;color:var(--text-s);">总成本 万元</div></div>
+        <div style="text-align:center;"><div style="font-size:16px;font-weight:800;color:#4a9a4a;" id="bn6">0</div><div style="font-size:10px;color:var(--text-s);">净利润 万元</div></div>
+        <div style="text-align:center;"><div style="font-size:16px;font-weight:800;color:#2c3e2c;" id="bn7">0</div><div style="font-size:10px;color:var(--text-s);">单位成本 元/kWh</div></div>
+        <div style="text-align:center;"><div style="font-size:16px;font-weight:800;color:#5ba050;" id="bn8">0</div><div style="font-size:10px;color:var(--text-s);">利润率 %</div></div>
+        <div style="text-align:center;"><div style="font-size:16px;font-weight:800;color:#4a9a4a;" id="bn9">0</div><div style="font-size:10px;color:var(--text-s);">碳减排 吨CO2</div></div>
+      </div>
+    </div>
+    <div class="panel" style="flex:1;opacity:0;"><div class="section-title">储能放电量及收益趋势 (万元)</div><canvas id="storageRevenueChart"></canvas></div>
+    <div class="panel" style="flex:1;opacity:0;"><div class="section-title">消费端用电结构</div>
+      <div style="display:flex;align-items:center;justify-content:center;gap:16px;height:calc(100% - 30px);">
+        <canvas id="consumerRing" width="90" height="90"></canvas>
+        <div style="display:flex;flex-direction:column;gap:4px;font-size:12px;" id="consumer-list"></div>
+      </div>
+    </div>
+    <div class="panel" style="flex:1;opacity:0;"><div class="section-title">节能减排效益分析</div>
+      <div style="display:flex;flex-direction:column;gap:12px;justify-content:center;height:calc(100% - 30px);">
+        <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;"><span style="color:var(--text-s);">碳减排量</span><span style="color:#4a9a4a;font-weight:600;" id="prog1-val">0 吨</span></div><div class="progress-track"><div class="progress-fill" id="prog1" style="width:0%;background:linear-gradient(90deg,#7ec87b,#5ba050);"></div></div></div>
+        <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;"><span style="color:var(--text-s);">节能量</span><span style="color:#5ba050;font-weight:600;" id="prog2-val">0 MWh</span></div><div class="progress-track"><div class="progress-fill" id="prog2" style="width:0%;background:linear-gradient(90deg,#5ba050,#4a9a4a);"></div></div></div>
+        <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;"><span style="color:var(--text-s);">绿电占比</span><span style="color:#4a9a4a;font-weight:600;" id="prog3-val">0 %</span></div><div class="progress-track"><div class="progress-fill" id="prog3" style="width:0%;background:linear-gradient(90deg,#7ec87b,#6ec86e);"></div></div></div>
+        <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;"><span style="color:var(--text-s);">水资源节约</span><span style="color:#5ba050;font-weight:600;" id="prog4-val">0 吨</span></div><div class="progress-track"><div class="progress-fill" id="prog4" style="width:0%;background:linear-gradient(90deg,#5ba050,#7ec87b);"></div></div></div>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<script>
+function updateClock(){var n=new Date;document.getElementById("clock").textContent=n.getFullYear()+"-"+String(n.getMonth()+1).padStart(2,"0")+"-"+String(n.getDate()).padStart(2,"0")+" "+String(n.getHours()).padStart(2,"0")+":"+String(n.getMinutes()).padStart(2,"0")+":"+String(n.getSeconds()).padStart(2,"0")}updateClock();setInterval(updateClock,1e3);
+Chart.defaults.color="#5a7a5a";Chart.defaults.borderColor="#c8e0c8";Chart.defaults.plugins.legend.display=false;
+var charts={};
+
+function drawRing(id,data){
+  var el=document.getElementById(id);if(!el)return;
+  if(charts[id])charts[id].destroy();
+  charts[id]=new Chart(el,{type:"doughnut",data:{labels:data.map(function(d){return d.name}),datasets:[{data:data.map(function(d){return d.percent}),backgroundColor:data.map(function(d){return d.color}),borderWidth:0,cutout:"65%"}]},options:{responsive:false,plugins:{tooltip:{callbacks:{label:function(ctx){var d=data[ctx.dataIndex];return d.name+": "+d.percent+"% ("+d.count+"户)"}}}}}});
+}
+function drawLine(id,labels,data,color){
+  var el=document.getElementById(id);if(!el)return;
+  if(charts[id])charts[id].destroy();
+  var ctx=el.getContext("2d"),grad=ctx.createLinearGradient(0,0,0,el.height);
+  grad.addColorStop(0,color+"66");grad.addColorStop(1,color+"05");
+  charts[id]=new Chart(el,{type:"line",data:{labels:labels,datasets:[{data:data,borderColor:color,borderWidth:2,pointRadius:0,fill:true,backgroundColor:grad,tension:0.3}]},options:{responsive:true,maintainAspectRatio:true,scales:{x:{display:true,ticks:{font:{size:9},maxTicksLimit:6}},y:{display:true,ticks:{font:{size:9}}}}}});
+}
+function drawBar(id,labels,data,color){
+  var el=document.getElementById(id);if(!el)return;
+  if(charts[id])charts[id].destroy();
+  charts[id]=new Chart(el,{type:"bar",data:{labels:labels,datasets:[{data:data,backgroundColor:color+"CC",borderColor:color,borderWidth:1,borderRadius:4}]},options:{responsive:true,maintainAspectRatio:true,scales:{x:{ticks:{font:{size:9},maxTicksLimit:7}},y:{ticks:{font:{size:9}}}}}});
+}
+
+async function loadData(){
+  try{
+    var res=await fetch("/api/dashboard"),d=await res.json();
+    document.getElementById("kpi-pv").innerHTML=d.kpi.pv+'<span class="kpi-unit"> kW</span>';
+    document.getElementById("kpi-wind").innerHTML=d.kpi.wind+'<span class="kpi-unit"> kW</span>';
+    document.getElementById("kpi-storage").innerHTML=d.kpi.storage+'<span class="kpi-unit"> kWh</span>';
+    document.getElementById("kpi-charging").innerHTML=d.kpi.charging_pile+'<span class="kpi-unit"> 台</span>';
+    document.getElementById("kpi-cooling").innerHTML=d.kpi.cooling+'<span class="kpi-unit"> kW</span>';
+    document.getElementById("kpi-gas").innerHTML=d.kpi.gas_turbine+'<span class="kpi-unit"> kW</span>';
+    document.getElementById("kpi-transformer").innerHTML=d.kpi.transformer+'<span class="kpi-unit"> %</span>';
+    document.getElementById("kpi-peak").innerHTML=d.kpi.peak_demand+'<span class="kpi-unit"> kW</span>';
+    drawRing("ringChart",d.customer_distribution);
+    drawRing("consumerRing",d.consumer_structure);
+    document.getElementById("customer-list").innerHTML=d.customer_distribution.map(function(c){return'<div style="display:flex;align-items:center;gap:6px;"><span style="width:8px;height:8px;border-radius:50%;background:'+c.color+';"></span>'+c.name+' <span style="color:#4a9a4a;font-weight:600;">'+c.count+'户</span></div>';}).join("");
+    document.getElementById("consumer-list").innerHTML=d.consumer_structure.map(function(c){return'<div style="display:flex;align-items:center;gap:6px;"><span style="width:8px;height:8px;border-radius:50%;background:'+c.color+';"></span>'+c.name+' <span style="color:#4a9a4a;font-weight:600;">'+c.percent+'%</span></div>';}).join("");
+    var lbl=[];for(var i=0;i<24;i++)lbl.push(i+":00");
+    drawLine("pvChart",lbl,d.pv_power.slice(0,24),"#4a9a4a");
+    drawLine("gridChart",lbl,d.grid_exchange.slice(0,24),"#e8a020");
+    drawBar("hydroChart",d.hydro_monthly.labels,d.hydro_monthly.data,"#5ba050");
+    var sr=document.getElementById("storageRevenueChart");
+    if(charts["storageRevenueChart"])charts["storageRevenueChart"].destroy();
+    charts["storageRevenueChart"]=new Chart(sr,{type:"bar",data:{labels:d.storage_revenue_monthly.labels,datasets:[{label:"放电量",data:d.storage_revenue_monthly.discharge,backgroundColor:"#5ba050CC",borderColor:"#5ba050",borderWidth:1,borderRadius:4},{label:"收益",data:d.storage_revenue_monthly.revenue,backgroundColor:"#e8a020CC",borderColor:"#e8a020",borderWidth:1,borderRadius:4,type:"line",tension:0.3}]},options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:true,labels:{font:{size:10},color:"#5a7a5a"}}},scales:{x:{ticks:{font:{size:9}}},y:{ticks:{font:{size:9}}}}}});
+    var b=d.monthly_benefit;
+    document.getElementById("bn1").textContent=b.power_supply;document.getElementById("bn2").textContent=b.power_sold;document.getElementById("bn3").textContent=b.loss_rate;document.getElementById("bn4").textContent=b.total_revenue;document.getElementById("bn5").textContent=b.total_cost;document.getElementById("bn6").textContent=b.net_profit;document.getElementById("bn7").textContent=b.unit_cost;document.getElementById("bn8").textContent=b.profit_rate;document.getElementById("bn9").textContent=b.carbon_reduction;
+    var e=d.emission;setTimeout(function(){document.getElementById("prog1").style.width=Math.min(e.carbon_reduction/16,100)+"%";document.getElementById("prog1-val").textContent=e.carbon_reduction+" 吨";document.getElementById("prog2").style.width=Math.min(e.energy_saving/13,100)+"%";document.getElementById("prog2-val").textContent=e.energy_saving+" MWh";document.getElementById("prog3").style.width=e.green_ratio+"%";document.getElementById("prog3-val").textContent=e.green_ratio+" %";document.getElementById("prog4").style.width=Math.min(e.water_saving/60,100)+"%";document.getElementById("prog4-val").textContent=e.water_saving+" 吨";},500);
+  }catch(err){console.error(err);}
+}
+
+gsap.fromTo("#left-panel .panel, #right-panel .panel",{opacity:0,y:20},{opacity:1,y:0,duration:0.5,stagger:0.08,ease:"power2.out",delay:0.2});
+gsap.fromTo("#kpi-cards",{opacity:0,y:15},{opacity:1,y:0,duration:0.5,ease:"power2.out",delay:0.4});
+gsap.fromTo("#building-view",{opacity:0,scale:0.97},{opacity:1,scale:1,duration:0.6,ease:"power2.out",delay:0.6});
+gsap.fromTo("#status-cards",{opacity:0,y:15},{opacity:1,y:0,duration:0.5,ease:"power2.out",delay:0.8});
+loadData();
+</script>
+</body>
+</html>

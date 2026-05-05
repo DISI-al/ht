@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>调度模型 - 能源优化引擎</title>
+<style>
+:root {--green-d:#2d6a2d;--green-m:#5ba050;--green-l:#7ec87b;--text-p:#2c3e2c;--text-s:#5a7a5a;--bg:#eaf5ea;--card:#fff;--accent:#e8a020;--border:#c8e0c8;}
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  font-family:'Microsoft YaHei',system-ui,sans-serif;
+  background:linear-gradient(180deg,#d8ebd8 0%,#e8f2e8 30%,#f0f7f0 100%);
+  min-height:100vh;color:var(--text-p);
+}
+.top-bar{
+  height:56px;background:linear-gradient(90deg,#2d6a2d,#4a9a4a,#5ba050);
+  display:flex;align-items:center;justify-content:space-between;padding:0 24px;
+  color:#fff;font-size:14px;box-shadow:0 2px 6px rgba(0,0,0,0.08);
+}
+.top-bar a{color:#fff;opacity:0.85;text-decoration:none;font-size:13px;}
+.top-bar a:hover{opacity:1;}
+.container{max-width:1100px;margin:30px auto;padding:0 24px;display:flex;flex-direction:column;gap:20px;}
+.card{
+  background:var(--card);border-radius:12px;padding:28px 32px;box-shadow:0 2px 12px rgba(0,0,0,0.03);border:1px solid var(--border);
+}
+.card h2{font-size:20px;color:var(--green-d);margin-bottom:16px;display:flex;align-items:center;gap:10px;}
+.card-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+.stat{text-align:center;padding:20px;background:#f8fcf8;border-radius:10px;border:1px solid var(--border);}
+.stat .num{font-size:28px;font-weight:800;color:var(--green-m);}
+.stat .lbl{font-size:12px;color:var(--text-s);margin-top:4px;}
+table{width:100%;border-collapse:collapse;margin-top:12px;}
+th,td{padding:10px 14px;border:1px solid var(--border);text-align:center;font-size:13px;}
+th{background:#f0f7f0;color:var(--green-d);font-weight:600;}
+td{color:#4a5a4a;}
+.btn{
+  display:inline-block;padding:10px 24px;background:linear-gradient(135deg,#4a9a4a,#5ba050);
+  color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;
+  text-decoration:none;transition:all 0.3s;
+}
+.btn:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(74,154,74,0.4);}
+</style>
+</head>
+<body>
+<div class="top-bar">
+  <div style="display:flex;align-items:center;gap:10px;font-weight:700;font-size:15px;">
+    <div style="width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;">D</div>
+    调度模型 · AI能源优化引擎
+  </div>
+  <div style="display:flex;align-items:center;gap:16px;">
+    <a href="/selector">← 返回导航</a>
+    <span id="clock"></span>
+    <a href="/logout">退出</a>
+  </div>
+</div>
+<div class="container">
+  <div class="card">
+    <h2>📊 优化调度结果</h2>
+    <div class="card-grid">
+      <div class="stat"><div class="num" id="cost">0</div><div class="lbl">总成本 (元)</div></div>
+      <div class="stat"><div class="num" id="emission">0</div><div class="lbl">碳排放 (kg)</div></div>
+      <div class="stat"><div class="num" id="eff">0</div><div class="lbl">系统效率</div></div>
+      <div class="stat"><div class="num" id="renew">0</div><div class="lbl">可再生能源比例</div></div>
+    </div>
+    <div style="margin-top:16px;text-align:center;">
+      <button class="btn" onclick="runOptimize()">运行调度优化</button>
+    </div>
+  </div>
+  <div class="card">
+    <h2>⚙ 优化算法说明</h2>
+    <div style="line-height:1.8;font-size:14px;color:#4a5a4a;">
+      <p>本系统采用 <strong>DEAP 遗传算法</strong>（NSGA-II）进行多目标优化，同时考虑以下三个目标：</p>
+      <p style="margin-top:12px;"><strong>1. 经济成本最小化</strong> — 综合考虑电网电价、燃料成本、设备维护成本</p>
+      <p><strong>2. 碳排放最小化</strong> — 优先使用光伏、风电等可再生能源，减少化石能源依赖</p>
+      <p><strong>3. 系统效率最大化</strong> — 优化储能充放电策略，提升能源利用效率</p>
+      <p style="margin-top:12px;">优化变量包括：电网交换功率、储能充放电功率、燃气轮机出力、氢能系统出力等。</p>
+    </div>
+  </div>
+</div>
+<script>
+function updateClock(){var n=new Date;document.getElementById("clock").textContent=n.getFullYear()+"-"+String(n.getMonth()+1).padStart(2,"0")+"-"+String(n.getDate()).padStart(2,"0")+" "+String(n.getHours()).padStart(2,"0")+":"+String(n.getMinutes()).padStart(2,"0")+":"+String(n.getSeconds()).padStart(2,"0")}updateClock();setInterval(updateClock,1e3);
+
+async function runOptimize(){
+  var btn=event.target;btn.textContent="优化中...";btn.disabled=true;
+  try{
+    var r=await fetch("/api/optimize"),d=await r.json();
+    document.getElementById("cost").textContent=d.total_cost.toLocaleString();
+    document.getElementById("emission").textContent=d.total_emission.toFixed(1);
+    document.getElementById("eff").textContent=(d.total_efficiency*100).toFixed(1)+"%";
+    document.getElementById("renew").textContent=(d.renewable_ratio*100).toFixed(1)+"%";
+  }catch(e){}
+  btn.textContent="运行调度优化";btn.disabled=false;
+}
+</script>
+</body>
+</html>

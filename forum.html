@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>交流平台 - 数据中心技术交流</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<style>
+:root{--g1:#1a4a2a;--g4:#60c080;--g5:#7ec87b;--text:#2c3e2c;--muted:#5a7a5a;--border:#e0e8e0;--card:#fff;}
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  font-family:'Inter','Microsoft YaHei','PingFang SC',system-ui,sans-serif;
+  min-height:100vh;color:var(--text);display:flex;overflow:hidden;background:#f2f7f3;
+}
+/* === 左侧导航 === */
+.sidebar{
+  width:200px;flex-shrink:0;background:#fff;display:flex;flex-direction:column;
+  box-shadow:2px 0 20px rgba(0,0,0,0.04);z-index:10;height:100vh;
+}
+.s-logo{
+  display:flex;align-items:center;gap:10px;padding:22px 18px;
+  border-bottom:1px solid #e8f0e8;
+}
+.s-logo .icon{
+  width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#60c080,#3a8a48);
+  display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;
+}
+.s-logo span{font-size:16px;font-weight:700;color:#1a4a2a;}
+.nav-list{flex:1;padding:16px 0;}
+.nav-item{
+  display:flex;align-items:center;gap:12px;padding:13px 22px;margin:2px 10px;
+  font-size:15px;color:#555;cursor:pointer;transition:all 0.25s;text-decoration:none;
+  border-radius:10px;border-left:3px solid transparent;
+}
+.nav-item:hover{color:#60c080;background:#f4fdf6;}
+.nav-item.active{color:#60c080;background:#f0fbf4;border-left-color:#60c080;font-weight:600;}
+.nav-item .ni{font-size:18px;}
+
+/* === 主区域 === */
+.main-area{flex:1;display:flex;flex-direction:column;overflow-y:auto;}
+/* 顶部栏 */
+.top-header{
+  position:relative;padding:22px 36px;overflow:hidden;
+  background:linear-gradient(180deg,#1a4a2a 0%,#2a6a3a 40%,#3a8a48 70%,#4a9a50 100%);
+}
+.top-header::before{
+  content:'';position:absolute;inset:0;
+  background:
+    radial-gradient(ellipse at 30% 40%,rgba(126,200,123,0.15) 0%,transparent 60%),
+    radial-gradient(ellipse at 70% 60%,rgba(96,192,128,0.12) 0%,transparent 50%);
+}
+.top-header::after{
+  content:'';position:absolute;top:0;left:0;right:0;bottom:0;
+  background:rgba(0,0,0,0.15);
+}
+.top-content{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;}
+.top-logo{display:flex;align-items:center;gap:14px;}
+.top-logo .tl-icon{
+  width:44px;height:44px;border-radius:12px;background:rgba(255,255,255,0.2);
+  display:flex;align-items:center;justify-content:center;font-size:22px;backdrop-filter:blur(8px);
+}
+.top-logo h1{font-size:30px;font-weight:800;color:#fff;text-shadow:0 2px 10px rgba(0,0,0,0.2);letter-spacing:0.03em;}
+.logged-badge{
+  display:flex;align-items:center;gap:7px;padding:9px 18px;
+  background:rgba(96,192,128,0.9);color:#fff;border-radius:22px;font-size:13px;font-weight:600;
+  text-decoration:none;border:1px solid rgba(126,200,123,0.4);
+  transition:all 0.3s;backdrop-filter:blur(8px);
+}
+.logged-badge:hover{background:rgba(110,210,140,0.95);transform:translateY(-1px);box-shadow:0 4px 16px rgba(0,0,0,0.15);}
+
+/* 内容区 */
+.content-body{flex:1;display:flex;gap:0;background:#f5faf6;}
+.content-main{flex:1;padding:24px;min-width:0;}
+/* 搜索栏 */
+.search-bar{display:flex;align-items:center;gap:10px;margin-bottom:20px;}
+.search-bar input{
+  flex:1;height:42px;padding:0 16px;border:2px solid #e0e0e0;border-radius:10px;
+  font-size:14px;outline:none;transition:all 0.3s;background:#fff;
+}
+.search-bar input:focus{border-color:#60c080;box-shadow:0 0 0 3px rgba(96,192,128,0.08);}
+.btn{
+  height:42px;padding:0 22px;border:none;border-radius:10px;font-size:14px;font-weight:600;
+  cursor:pointer;transition:all 0.3s;white-space:nowrap;
+}
+.btn-primary{background:#60c080;color:#fff;box-shadow:0 2px 10px rgba(96,192,128,0.25);}
+.btn-primary:hover{background:#50b070;transform:translateY(-1px);box-shadow:0 4px 16px rgba(96,192,128,0.35);}
+.btn-outline{background:#fff;color:#60c080;border:2px solid #60c080;}
+.btn-outline:hover{background:#f5fdf7;}
+.btn-ghost{border:2px solid #e0e0e0;color:#666;background:#fff;}
+.btn-ghost:hover{border-color:#ccc;}
+
+/* 表格 */
+.table-wrap{
+  background:#fff;border-radius:14px;overflow:hidden;
+  box-shadow:0 3px 16px rgba(0,0,0,0.04);border:1px solid #e8f0e8;
+}
+table{width:100%;border-collapse:collapse;}
+thead th{
+  padding:15px 18px;text-align:left;font-size:13px;font-weight:700;color:#4a5a4a;
+  background:#fafdfa;border-bottom:2px solid #e8f0e8;white-space:nowrap;
+}
+tbody td{padding:14px 18px;font-size:13px;color:#444;border-bottom:1px solid #f3f7f3;}
+tbody tr{transition:all 0.2s;}
+tbody tr:nth-child(even){background:rgba(184,233,192,0.06);}
+tbody tr:hover{background:rgba(96,192,128,0.08);}
+.read-count{color:#60c080;font-weight:700;font-size:14px;}
+.type-tag{
+  display:inline-block;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:600;
+}
+.tag-energy{background:#e8f5e0;color:#3a8a40;}
+.tag-storage{background:#e0f0f0;color:#2a7a7a;}
+.tag-carbon{background:#fef0e0;color:#a06020;}
+
+/* 排名栏 */
+.rank-panel{
+  width:290px;flex-shrink:0;padding:24px 18px;border-left:1px solid #e8f0e8;
+  background:#fff;overflow-y:auto;
+}
+.rank-panel h3{text-align:center;font-size:17px;font-weight:700;color:#1a4a2a;margin-bottom:20px;}
+.rank-item{
+  display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:10px;
+  margin-bottom:6px;transition:all 0.25s;cursor:default;
+}
+.rank-item:hover{background:#f4fdf6;transform:translateX(2px);}
+.rank-item .rn{font-size:18px;font-weight:800;width:28px;text-align:center;flex-shrink:0;}
+.rank-item:nth-child(1){background:#f0fdf4;border:1px solid #d0f0d8;}
+.rank-item:nth-child(1) .rn{color:#60c080;font-size:22px;}
+.rank-item:nth-child(2) .rn,.rank-item:nth-child(3) .rn{color:#7ec87b;}
+.rank-item:nth-child(n+4) .rn{color:#b0d8b0;}
+.rank-item .info{flex:1;min-width:0;}
+.rank-item .name{font-size:13px;color:#333;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.rank-item .score{font-size:13px;color:#60c080;font-weight:700;flex-shrink:0;}
+
+/* Back link */
+.back-row{margin-bottom:16px;}
+.back-row a{color:#60c080;text-decoration:none;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px;transition:all 0.2s;}
+.back-row a:hover{color:#3a8a40;}
+</style>
+</head>
+<body>
+<!-- 左侧导航 -->
+<nav class="sidebar" id="sidebar">
+  <div class="s-logo"><div class="icon">🌿</div><span>清枢致远</span></div>
+  <div class="nav-list">
+    <a class="nav-item active"><span class="ni">🏠</span> 首页</a>
+    <a class="nav-item"><span class="ni">📄</span> 技术分享</a>
+    <a class="nav-item"><span class="ni">🔗</span> 分享管理</a>
+    <a class="nav-item"><span class="ni">🤖</span> 模型对话</a>
+  </div>
+</nav>
+
+<!-- 主区域 -->
+<div class="main-area">
+  <div class="top-header" id="topHeader">
+    <div class="top-content">
+      <div class="top-logo">
+        <div class="tl-icon">🌿</div>
+        <h1>数据中心技术交流平台</h1>
+      </div>
+      <a href="/logout" class="logged-badge">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-7 8-7s8 3 8 7"/></svg>
+        已登录
+      </a>
+    </div>
+  </div>
+  <div class="content-body">
+    <div class="content-main">
+      <div class="back-row"><a href="/">&larr; 返回首页</a></div>
+      <div class="search-bar">
+        <input type="text" placeholder="请输入数据中心名称..." id="searchInput">
+        <button class="btn btn-primary" onclick="doSearch()">搜索</button>
+        <button class="btn btn-outline">AI检索</button>
+        <button class="btn btn-ghost" onclick="renderTable(tableData)">↻ 重置</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>数据中心名称</th><th>分享日期</th><th>分享类型</th><th>分享内容</th><th>阅读量</th></tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </div>
+    <!-- 排名 -->
+    <div class="rank-panel" id="rankPanel">
+      <h3>🏆 数据中心本月排名</h3>
+      <div id="rankList"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+var tableData=[
+  {name:'广州XX数据中心',date:'2026/03/20',type:'能源调控',content:'数据中心零碳化能源调用综合方法',reads:2100},
+  {name:'四川XX数据中心',date:'2026/02/25',type:'储能技术',content:'数据中心先进储能方法',reads:1200},
+  {name:'深圳XX数据中心',date:'2026/01/26',type:'能源调控',content:'数据中心降本增效能源调用综合方法',reads:1560},
+  {name:'上海XX数据中心',date:'2025/12/10',type:'碳排放',content:'数据中心全生命周期碳排放核算体系',reads:980},
+  {name:'北京XX数据中心',date:'2025/11/05',type:'节能优化',content:'基于AI的数据中心PUE优化策略',reads:1850},
+];
+var rankData=[
+  {name:'广州XX数据中心',score:2450},
+  {name:'四川XX数据中心',score:2200},
+  {name:'深圳XX数据中心',score:1920},
+  {name:'北京XX数据中心',score:1890},
+  {name:'云南XX数据中心',score:1480},
+  {name:'上海XX数据中心',score:1340},
+  {name:'西藏XX数据中心',score:1200},
+];
+
+function getTagClass(type){
+  if(type.includes('能源'))return'tag-energy';if(type.includes('储能'))return'tag-storage';return'tag-carbon';
+}
+function renderTable(data){
+  var h='';
+  data.forEach(function(r){
+    h+='<tr><td><strong>'+r.name+'</strong></td><td>'+r.date+'</td><td><span class="type-tag '+getTagClass(r.type)+'">'+r.type+'</span></td><td>'+r.content+'</td><td class="read-count">'+r.reads.toLocaleString()+'</td></tr>';
+  });
+  document.getElementById('tableBody').innerHTML=h;
+}
+function renderRank(){
+  var h='';
+  rankData.forEach(function(r,i){
+    h+='<div class="rank-item"><span class="rn">'+(i+1)+'</span><div class="info"><div class="name">'+r.name+'</div></div><span class="score">'+r.score+' 积分</span></div>';
+  });
+  document.getElementById('rankList').innerHTML=h;
+}
+function doSearch(){
+  var q=document.getElementById('searchInput').value.toLowerCase();
+  var filtered=tableData.filter(function(r){return r.name.toLowerCase().includes(q)||r.content.toLowerCase().includes(q);});
+  renderTable(filtered.length?filtered:tableData);
+}
+renderTable(tableData);
+renderRank();
+
+// GSAP
+gsap.fromTo('#sidebar',{x:-40,opacity:0},{x:0,opacity:1,duration:0.5,ease:'power3.out'});
+gsap.fromTo('#topHeader',{opacity:0,y:-20},{opacity:1,y:0,duration:0.5,ease:'power2.out',delay:0.15});
+gsap.fromTo('#rankPanel',{x:40,opacity:0},{x:0,opacity:1,duration:0.5,ease:'power3.out',delay:0.25});
+gsap.fromTo('.table-wrap',{opacity:0,y:20},{opacity:1,y:0,duration:0.5,ease:'power2.out',delay:0.35});
+</script>
+</body>
+</html>
